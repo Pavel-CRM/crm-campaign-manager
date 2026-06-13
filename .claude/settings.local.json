@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx prisma *)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx prisma db push)",
+      "Bash(npx tsc *)",
+      "Read(//Users/pavel/.claude/**)",
+      "Read(//Users/pavel/**)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" NEXTAUTH_SECRET=\"crm-campaign-secret-key-2026-secure\" NEXTAUTH_URL=\"http://localhost:3001\" ANTHROPIC_API_KEY=\"placeholder\" npm run build)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}

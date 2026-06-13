@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String
+  name          String?
+  createdAt     DateTime       @default(now())
+  organizations Organization[]
+}
+
+model Organization {
+  id         String              @id @default(cuid())
+  name       String
+  userId     String
+  user       User                @relation(fields: [userId], references: [id])
+  settings   OrgSettings?
+  activities Activity[]
+  rules      CommunicationRule[]
+}
+
+model OrgSettings {
+  id            String       @id @default(cuid())
+  orgId         String       @unique
+  org           Organization @relation(fields: [orgId], references: [id])
+  description   String       @default("")
+  services      String       @default("")
+  products      String       @default("")
+  newsletters   String       @default("")
+  categories    String       @default("")
+  channels      String       @default("[]")
+  businessFocus String       @default("")
+  topProducts   String       @default("")
+}
+
+model CommunicationRule {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  category  String
+  channel   String
+  frequency Int
+  days      String       @default("[]")
+  notes     String       @default("")
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  title       String
+  date        DateTime
+  channels    String
+  category    String
+  status      String       @default("draft")
+  content     String       @default("{}")
+  isGenerated Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
