@@ -10,7 +10,10 @@
       "Bash(DATABASE_URL=\"file:./prisma/dev.db\" NEXTAUTH_SECRET=\"crm-campaign-secret-key-2026-secure\" NEXTAUTH_URL=\"http://localhost:3001\" ANTHROPIC_API_KEY=\"placeholder\" npm run build)",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "mcp__9b66e7de-428c-45f2-b774-e530142c3dc7__deploy_to_vercel",
+      "Bash(vercel --version)",
+      "Bash(npm i *)"
     ]
   }
 }
