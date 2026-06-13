@@ -1,8 +1,11 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { isSubscriptionActive } from '@/lib/yookassa'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/SignOutButton'
+import { SubscriptionBadge } from '@/components/SubscriptionBadge'
 
 export default async function DashboardLayout({
   children,
@@ -14,6 +17,30 @@ export default async function DashboardLayout({
   if (!session) {
     redirect('/login')
   }
+
+  // Fresh subscription check from DB
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      subscriptionStatus: true,
+      trialEndsAt: true,
+      subscriptionEndsAt: true,
+      subscriptionPlan: true,
+      isAdmin: true,
+    },
+  })
+
+  if (!user) redirect('/login')
+
+  const hasAccess = isSubscriptionActive(user)
+  if (!hasAccess) {
+    redirect('/subscribe')
+  }
+
+  const now = new Date()
+  const trialDaysLeft = user.subscriptionStatus === 'trial' && user.trialEndsAt
+    ? Math.ceil((user.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    : null
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -53,10 +80,29 @@ export default async function DashboardLayout({
             </svg>
             Настройки
           </Link>
+
+          {user.isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-purple-300 hover:bg-purple-900/30 hover:text-purple-200 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Администратор
+            </Link>
+          )}
         </nav>
 
-        <div className="p-4 border-t border-gray-700">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="p-4 border-t border-gray-700 space-y-3">
+          {/* Subscription badge */}
+          <SubscriptionBadge
+            status={user.subscriptionStatus}
+            plan={user.subscriptionPlan}
+            trialDaysLeft={trialDaysLeft}
+          />
+
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-sm font-medium">
               {session.user?.name?.[0] || session.user?.email?.[0] || 'U'}
             </div>
@@ -69,8 +115,16 @@ export default async function DashboardLayout({
         </div>
       </aside>
 
+      {/* Trial banner */}
+      {trialDaysLeft !== null && trialDaysLeft <= 3 && (
+        <div className="fixed top-0 left-60 right-0 z-50 bg-orange-500 text-white text-sm text-center py-2 px-4">
+          ⚠️ Пробный период заканчивается через {trialDaysLeft} дн. —{' '}
+          <Link href="/subscribe" className="underline font-semibold">Оформить подписку</Link>
+        </div>
+      )}
+
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className={`flex-1 overflow-auto ${trialDaysLeft !== null && trialDaysLeft <= 3 ? 'pt-9' : ''}`}>
         {children}
       </main>
     </div>

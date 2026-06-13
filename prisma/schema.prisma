@@ -8,12 +8,32 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  password      String
-  name          String?
-  createdAt     DateTime       @default(now())
-  organizations Organization[]
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  password           String
+  name               String?
+  createdAt          DateTime  @default(now())
+  trialEndsAt        DateTime?
+  subscriptionStatus String    @default("trial")  // trial | active | expired | lifetime
+  subscriptionPlan   String?                       // monthly | annual | lifetime
+  subscriptionEndsAt DateTime?
+  ykPaymentMethodId  String?
+  isAdmin            Boolean   @default(false)
+  organizations      Organization[]
+  payments           Payment[]
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  ykPaymentId String    @unique
+  amount      Float
+  plan        String
+  status      String    @default("pending")  // pending | succeeded | cancelled
+  periodStart DateTime?
+  periodEnd   DateTime?
+  createdAt   DateTime  @default(now())
 }
 
 model Organization {

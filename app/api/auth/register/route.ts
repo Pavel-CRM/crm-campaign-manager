@@ -13,10 +13,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    })
-
+    const existingUser = await prisma.user.findUnique({ where: { email } })
     if (existingUser) {
       return NextResponse.json(
         { error: 'Пользователь с таким email уже существует' },
@@ -26,15 +23,26 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
+    // Trial: 10 days from now
+    const trialEndsAt = new Date()
+    trialEndsAt.setDate(trialEndsAt.getDate() + 10)
+
+    // Admin + lifetime for ADMIN_EMAIL
+    const adminEmail = process.env.ADMIN_EMAIL
+    const isAdminUser = adminEmail && email === adminEmail
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
+        trialEndsAt: isAdminUser ? null : trialEndsAt,
+        subscriptionStatus: isAdminUser ? 'lifetime' : 'trial',
+        subscriptionPlan: isAdminUser ? 'lifetime' : null,
+        isAdmin: !!isAdminUser,
       },
     })
 
-    // Create default organization for user
     const org = await prisma.organization.create({
       data: {
         name: name ? `Компания ${name}` : 'Моя компания',
@@ -42,7 +50,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create default settings
     await prisma.orgSettings.create({
       data: {
         orgId: org.id,
@@ -53,9 +60,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, userId: user.id })
   } catch (error) {
     console.error('Register error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка при регистрации' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Ошибка при регистрации' }, { status: 500 })
   }
 }
