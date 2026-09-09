@@ -5,6 +5,11 @@ import { prisma } from '@/lib/prisma'
 import { generateActivityContent } from '@/lib/anthropic'
 import { format } from 'date-fns'
 
+// Генерация через Claude занимает десятки секунд — поднимаем лимит
+// выполнения функции, иначе Vercel обрывает соединение с браузером
+// (по умолчанию 10-15 с) ещё до того, как план будет готов.
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
