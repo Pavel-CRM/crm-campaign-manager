@@ -22,9 +22,14 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        })
+        // Поиск без учёта регистра: пользователь может ввести адрес не так,
+        // как он записан в базе (в Postgres сравнение строк регистрозависимое).
+        const typed = credentials.email.trim()
+        const user =
+          (await prisma.user.findUnique({ where: { email: typed } })) ||
+          (await prisma.user.findFirst({
+            where: { email: { equals: typed.toLowerCase(), mode: 'insensitive' } },
+          }))
 
         if (!user) return null
 
@@ -33,7 +38,11 @@ export const authOptions: NextAuthOptions = {
 
         // Auto-grant admin + lifetime to ADMIN_EMAIL
         const adminEmail = process.env.ADMIN_EMAIL
-        if (adminEmail && user.email === adminEmail && !user.isAdmin) {
+        if (
+          adminEmail &&
+          user.email.toLowerCase() === adminEmail.trim().toLowerCase() &&
+          !user.isAdmin
+        ) {
           await prisma.user.update({
             where: { id: user.id },
             data: {

@@ -4,16 +4,22 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, name } = await req.json()
+    const { email: rawEmail, password, name } = await req.json()
 
-    if (!email || !password) {
+    if (!rawEmail || !password) {
       return NextResponse.json(
         { error: 'Email и пароль обязательны' },
         { status: 400 }
       )
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } })
+    // Храним email в нижнем регистре — иначе вход и восстановление пароля
+    // ломаются из-за регистрозависимого сравнения в Postgres.
+    const email = String(rawEmail).trim().toLowerCase()
+
+    const existingUser = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    })
     if (existingUser) {
       return NextResponse.json(
         { error: 'Пользователь с таким email уже существует' },
@@ -29,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Admin + lifetime for ADMIN_EMAIL
     const adminEmail = process.env.ADMIN_EMAIL
-    const isAdminUser = adminEmail && email === adminEmail
+    const isAdminUser = adminEmail && email === adminEmail.trim().toLowerCase()
 
     const user = await prisma.user.create({
       data: {

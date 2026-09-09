@@ -12,11 +12,13 @@ export async function POST(req: NextRequest) {
     // Всегда отвечаем одинаково, чтобы нельзя было узнать, какие email
     // зарегистрированы в системе.
     if (typed) {
+      // Поиск без учёта регистра: адрес мог быть сохранён как Ivan@Mail.ru,
+      // а введён как ivan@mail.ru (в Postgres сравнение строк регистрозависимое).
       const user =
         (await prisma.user.findUnique({ where: { email: typed } })) ||
-        (normalized !== typed
-          ? await prisma.user.findUnique({ where: { email: normalized } })
-          : null)
+        (await prisma.user.findFirst({
+          where: { email: { equals: normalized, mode: 'insensitive' } },
+        }))
 
       if (user) {
         const token = createResetToken(user.id, user.password)
